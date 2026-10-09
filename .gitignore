@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# клон AIHWKit для сверки — восстанавливается скриптом
+/aihwkit/
+/tmp/
+
+# выходные файлы прогонов
+*.stl
+*.step
+*.brep
+*.png
+!docs/**/*.png

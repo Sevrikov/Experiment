@@ -1,0 +1,19 @@
+# Ядро: нужно всегда
+numpy>=2.0
+
+# Обучение и сверка с AIHWKit
+torch>=2.0
+
+# CAD-ядро для части AI-CAD. ВАЖНО: pythonocc-core не ставится через pip.
+# cadquery тянет cadquery-ocp — это тот же OCCT 7.x, только другие биндинги.
+cadquery>=2.7
+
+# Разбор DSL для AI-CAD
+lark>=1.1
+
+# Клиент Anthropic API
+anthropic>=0.40
+
+# Рендер. vtk приходит вместе с cadquery, но headless-рендер без OSMesa
+# не работает — для MVP используется matplotlib с бэкендом Agg.
+matplotlib>=3.8

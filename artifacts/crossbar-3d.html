@@ -1,0 +1,1557 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}</style></head><body>
+<title>Аналоговый кроссбар</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:ital@0;1&display=swap">
+
+<style>
+/* ─── Токены ────────────────────────────────────────────────────────────
+   Светлая палитра определена полностью на голом :root.
+   Тёмная переопределяет ТОЛЬКО значения токенов — в двух местах,
+   чтобы работали и системная тема, и явный переключатель. */
+:root {
+  --ground:    #F4F1F7;
+  --surface:   #FFFFFF;
+  --surface-2: #EBE6F1;
+  --sunken:    #E3DDEB;
+  --line:      #D8D0E2;
+  --line-soft: #E7E1EE;
+  --ink:       #191420;
+  --ink-2:     #574E65;
+  --ink-3:     #877E95;
+
+  --flux:      #C25E0A;   /* тепловой — электрический режим */
+  --flux-hot:  #8F3D00;
+  --flux-dim:  #E8C9A8;
+  --cryo:      #0B7E92;   /* криогенный — флюидный режим */
+  --cryo-hot:  #075967;
+  --cryo-dim:  #B4DCE3;
+
+  --bad:       #B92846;
+  --good:      #1B7F51;
+
+  --accent:     var(--flux);
+  --accent-hot: var(--flux-hot);
+  --accent-dim: var(--flux-dim);
+
+  --shadow: 0 1px 2px rgba(25, 20, 32, .06), 0 8px 24px -12px rgba(25, 20, 32, .18);
+  --canvas-bg: #EFEBF4;
+  --wire-base: #C3BACE;
+  --glow: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:    #0D0B12;
+    --surface:   #16131E;
+    --surface-2: #1E1A29;
+    --sunken:    #100D17;
+    --line:      #2C2639;
+    --line-soft: #221D2E;
+    --ink:       #EFEBF5;
+    --ink-2:     #A79EB6;
+    --ink-3:     #6C6480;
+
+    --flux:      #FFA23A;
+    --flux-hot:  #FFE7C0;
+    --flux-dim:  #4A3520;
+    --cryo:      #4FD8E8;
+    --cryo-hot:  #D6F7FC;
+    --cryo-dim:  #16404A;
+
+    --bad:       #F2607A;
+    --good:      #6FD3A0;
+
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px -16px rgba(0,0,0,.7);
+    --canvas-bg: #0A0810;
+    --wire-base: #2A2437;
+    --glow: 1;
+  }
+}
+
+:root[data-theme="dark"] {
+  --ground:    #0D0B12;
+  --surface:   #16131E;
+  --surface-2: #1E1A29;
+  --sunken:    #100D17;
+  --line:      #2C2639;
+  --line-soft: #221D2E;
+  --ink:       #EFEBF5;
+  --ink-2:     #A79EB6;
+  --ink-3:     #6C6480;
+
+  --flux:      #FFA23A;
+  --flux-hot:  #FFE7C0;
+  --flux-dim:  #4A3520;
+  --cryo:      #4FD8E8;
+  --cryo-hot:  #D6F7FC;
+  --cryo-dim:  #16404A;
+
+  --bad:       #F2607A;
+  --good:      #6FD3A0;
+
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px -16px rgba(0,0,0,.7);
+  --canvas-bg: #0A0810;
+  --wire-base: #2A2437;
+  --glow: 1;
+}
+
+:root[data-carrier="fluidic"] {
+  --accent:     var(--cryo);
+  --accent-hot: var(--cryo-hot);
+  --accent-dim: var(--cryo-dim);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+.num { font-family: "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+/* ─── Каркас стенда ───────────────────────────────────────────────── */
+.bench {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.masthead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.masthead h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -.02em;
+  text-wrap: balance;
+}
+.masthead .sub {
+  margin: 3px 0 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  max-width: 62ch;
+}
+.eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-family: "IBM Plex Mono", monospace;
+}
+
+/* Переключатель носителя */
+.carrier {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--sunken);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.carrier button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 7px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s, color .15s;
+}
+.carrier button:hover { color: var(--ink); }
+.carrier button[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--accent);
+  box-shadow: var(--shadow);
+}
+.carrier button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* ─── Основная зона ───────────────────────────────────────────────── */
+.stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 316px;
+  gap: 14px;
+  align-items: start;
+}
+@media (max-width: 1080px) { .stage { grid-template-columns: 1fr; } }
+
+.viewport {
+  position: relative;
+  background: var(--canvas-bg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  min-height: 460px;
+  aspect-ratio: 16 / 11;
+}
+@media (max-width: 640px) { .viewport { aspect-ratio: 4 / 5; } }
+.viewport canvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+.viewport canvas:active { cursor: grabbing; }
+
+.vp-legend {
+  position: absolute;
+  left: 12px; bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 11px;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  backdrop-filter: blur(8px);
+  font-size: 10.5px;
+  color: var(--ink-2);
+  pointer-events: none;
+}
+.ramp {
+  width: 88px; height: 7px; border-radius: 4px;
+  background: linear-gradient(90deg, var(--wire-base), var(--accent), var(--accent-hot));
+}
+.vp-hint {
+  position: absolute;
+  right: 12px; top: 12px;
+  font-size: 10.5px;
+  color: var(--ink-3);
+  font-family: "IBM Plex Mono", monospace;
+  pointer-events: none;
+  text-align: right;
+  line-height: 1.6;
+}
+
+/* ─── Правая рейка управления ─────────────────────────────────────── */
+.rail { display: flex; flex-direction: column; gap: 10px; }
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 13px 14px 15px;
+}
+.panel > h2 {
+  margin: 0 0 11px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-family: "IBM Plex Mono", monospace;
+}
+
+select, .btn {
+  width: 100%;
+  appearance: none;
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  cursor: pointer;
+}
+select:focus-visible, .btn:focus-visible, input:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 1px;
+}
+.btn { text-align: center; font-weight: 500; transition: border-color .15s, color .15s; }
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+
+.spec {
+  margin-top: 11px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 12px;
+  font-size: 11.5px;
+}
+.spec dt { color: var(--ink-3); }
+.spec dd {
+  margin: 0;
+  text-align: right;
+  font-family: "IBM Plex Mono", monospace;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+}
+.cite {
+  margin: 11px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-soft);
+  font-family: "IBM Plex Serif", Georgia, serif;
+  font-style: italic;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--ink-3);
+}
+
+/* Тумблеры */
+.switches { display: flex; flex-direction: column; gap: 1px; }
+.sw {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  cursor: pointer;
+  font-size: 12.5px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.sw:last-child { border-bottom: 0; }
+.sw input { position: absolute; opacity: 0; width: 0; height: 0; }
+.sw .track {
+  flex: none;
+  width: 30px; height: 17px;
+  border-radius: 9px;
+  background: var(--sunken);
+  border: 1px solid var(--line);
+  position: relative;
+  transition: background .16s, border-color .16s;
+}
+.sw .track::after {
+  content: "";
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 11px; height: 11px;
+  border-radius: 50%;
+  background: var(--ink-3);
+  transition: transform .16s, background .16s;
+}
+.sw input:checked + .track { background: var(--accent-dim); border-color: var(--accent); }
+.sw input:checked + .track::after { transform: translateX(13px); background: var(--accent); }
+.sw input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sw .lbl { flex: 1; }
+.sw .val {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Слайдер */
+.slider-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 12.5px; margin-bottom: 5px;
+}
+.slider-head b {
+  font-family: "IBM Plex Mono", monospace;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+input[type=range] {
+  width: 100%;
+  appearance: none;
+  background: transparent;
+  height: 18px;
+  cursor: pointer;
+  margin: 0;
+}
+input[type=range]::-webkit-slider-runnable-track {
+  height: 3px; border-radius: 2px; background: var(--line);
+}
+input[type=range]::-moz-range-track {
+  height: 3px; border-radius: 2px; background: var(--line);
+}
+input[type=range]::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px; height: 14px; margin-top: -5.5px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--surface);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+input[type=range]::-moz-range-thumb {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--surface);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.tick-row {
+  display: flex; justify-content: space-between;
+  font-size: 9.5px; color: var(--ink-3);
+  font-family: "IBM Plex Mono", monospace;
+  margin-top: 1px;
+}
+
+/* Вектор входа */
+.vec { display: flex; gap: 4px; align-items: flex-end; height: 74px; }
+.vec-bar {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  height: 100%;
+  cursor: ns-resize;
+  touch-action: none;
+}
+.vec-bar .col {
+  flex: 1;
+  width: 100%;
+  background: var(--sunken);
+  border-radius: 3px;
+  display: flex; align-items: flex-end;
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+}
+.vec-bar .fill { width: 100%; background: var(--accent); border-radius: 2px; transition: height .08s; }
+.vec-bar.on .col { border-color: var(--accent); }
+.vec-bar .ix { font-size: 9px; color: var(--ink-3); font-family: "IBM Plex Mono", monospace; }
+
+/* Матрица весов */
+.wgrid {
+  display: grid;
+  gap: 2px;
+  aspect-ratio: 1;
+  margin-bottom: 10px;
+}
+.wcell { border-radius: 2px; cursor: crosshair; transition: outline-color .1s; outline: 1.5px solid transparent; }
+.wcell.hl { outline-color: var(--ink); }
+
+/* ─── Нижний блок показаний ───────────────────────────────────────── */
+.readout {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+  border-bottom: 1px solid var(--line);
+}
+.metric {
+  padding: 13px 16px;
+  border-right: 1px solid var(--line-soft);
+}
+.metric:last-child { border-right: 0; }
+.metric .k {
+  font-size: 9.5px; letter-spacing: .13em; text-transform: uppercase;
+  color: var(--ink-3); font-family: "IBM Plex Mono", monospace;
+  display: block; margin-bottom: 4px;
+}
+.metric .v {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 21px; font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.01em;
+  line-height: 1.1;
+}
+.metric .u { font-size: 12px; color: var(--ink-3); margin-left: 3px; }
+.metric.is-bad .v { color: var(--bad); }
+.metric.is-good .v { color: var(--good); }
+
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 660px; font-size: 12.5px; }
+caption {
+  text-align: left;
+  padding: 12px 16px 9px;
+  font-size: 10px; letter-spacing: .15em; text-transform: uppercase;
+  color: var(--ink-3); font-family: "IBM Plex Mono", monospace;
+}
+th, td {
+  padding: 7px 16px;
+  text-align: right;
+  border-bottom: 1px solid var(--line-soft);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+th {
+  font-size: 10px; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--ink-3); font-weight: 600;
+  border-bottom: 1px solid var(--line);
+}
+th:first-child, td:first-child { text-align: left; }
+tbody td { font-family: "IBM Plex Mono", monospace; color: var(--ink-2); }
+tbody td:first-child { color: var(--ink); font-weight: 500; }
+tbody td.strong { color: var(--ink); }
+tbody tr { transition: background .1s; }
+tbody tr:hover, tbody tr.hl { background: var(--surface-2); }
+tbody tr:last-child td { border-bottom: 0; }
+.err-pos { color: var(--bad); }
+.err-ok  { color: var(--good); }
+.bar-cell { width: 92px; }
+.minibar {
+  height: 5px; border-radius: 3px;
+  background: var(--accent);
+  min-width: 1px;
+}
+
+/* ─── Сноски ──────────────────────────────────────────────────────── */
+.notes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 14px;
+}
+.note {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--accent);
+  border-radius: 0 10px 10px 0;
+  padding: 13px 16px;
+}
+.note h3 {
+  margin: 0 0 6px;
+  font-size: 12.5px; font-weight: 600;
+}
+.note p {
+  margin: 0 0 7px;
+  font-size: 12.5px; line-height: 1.6; color: var(--ink-2);
+}
+.note p:last-child { margin-bottom: 0; }
+.note code {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11.5px;
+  background: var(--surface-2);
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: var(--ink);
+}
+.note.warn { border-left-color: var(--bad); }
+
+.colophon {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 11.5px;
+  color: var(--ink-3);
+  line-height: 1.65;
+}
+.colophon a { color: var(--ink-2); text-decoration: underline; text-underline-offset: 2px; }
+.colophon a:hover { color: var(--accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
+</style>
+
+<div class="bench">
+
+  <header class="masthead">
+    <div>
+      <div class="eyebrow">Analog in-memory computing · стенд</div>
+      <h1>Аналоговый кроссбар</h1>
+      <p class="sub">Матрично-векторное умножение, которое выполняет сама физика: закон Ома даёт умножение, закон Кирхгофа — суммирование. Яркость каждого сегмента — вычисленный ток, а модель шума и дрейфа перенесена из калибровочного пакета IBM AIHWKit.</p>
+    </div>
+    <div class="carrier" role="group" aria-label="Физический носитель">
+      <button id="m-el" aria-pressed="true">Ток · PCM</button>
+      <button id="m-fl" aria-pressed="false">Поток · He 2 K</button>
+    </div>
+  </header>
+
+  <div class="stage">
+    <section class="viewport">
+      <canvas id="cv" aria-label="Трёхмерная схема кроссбара с подсветкой по величине тока"></canvas>
+      <div class="vp-hint" id="hint">потяни — поворот<br>колесо — масштаб</div>
+      <div class="vp-legend">
+        <span id="leg-lo">0</span>
+        <span class="ramp"></span>
+        <span id="leg-hi">—</span>
+      </div>
+    </section>
+
+    <aside class="rail">
+
+      <div class="panel">
+        <h2>Библиотека устройств</h2>
+        <select id="dev" aria-label="Модель устройства"></select>
+        <dl class="spec" id="spec"></dl>
+        <p class="cite" id="cite"></p>
+      </div>
+
+      <div class="panel">
+        <h2>Неидеальности</h2>
+        <div class="switches">
+          <label class="sw">
+            <input type="checkbox" id="f-prog" checked>
+            <span class="track"></span>
+            <span class="lbl">Ошибка записи</span>
+            <span class="val" id="v-prog"></span>
+          </label>
+          <label class="sw">
+            <input type="checkbox" id="f-noise" checked>
+            <span class="track"></span>
+            <span class="lbl">Шум чтения</span>
+            <span class="val" id="v-noise"></span>
+          </label>
+          <label class="sw">
+            <input type="checkbox" id="f-adc" checked>
+            <span class="track"></span>
+            <span class="lbl">Квантование АЦП</span>
+            <span class="val" id="v-adc"></span>
+          </label>
+          <label class="sw">
+            <input type="checkbox" id="f-comp">
+            <span class="track"></span>
+            <span class="lbl">Компенсация дрейфа</span>
+            <span class="val">×1/d</span>
+          </label>
+        </div>
+
+        <div style="margin-top:13px">
+          <div class="slider-head">
+            <span>Время с момента записи</span>
+            <b id="v-time">1 с</b>
+          </div>
+          <input type="range" id="time" min="0" max="100" value="0" aria-label="Время с момента записи весов">
+          <div class="tick-row"><span>1 с</span><span>1 ч</span><span>1 мес</span><span>10 лет</span></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2 id="vec-title">Вектор входа</h2>
+        <div class="vec" id="vec"></div>
+        <div class="btn-row" style="margin-top:11px">
+          <button class="btn" id="v-rand">Случайный</button>
+          <button class="btn" id="v-flat">Все равны</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2 id="w-title">Матрица весов</h2>
+        <div class="wgrid" id="wgrid"></div>
+        <select id="wpreset" aria-label="Шаблон матрицы весов">
+          <option value="rand">Равномерно случайная</option>
+          <option value="gauss">Гауссов гребень</option>
+          <option value="ident">Диагональная</option>
+          <option value="sparse">Разреженная 25 %</option>
+          <option value="ramp">Градиент по столбцам</option>
+        </select>
+        <button class="btn" id="reprog" style="margin-top:7px">Перезаписать матрицу</button>
+      </div>
+
+    </aside>
+  </div>
+
+  <section class="readout">
+    <div class="metrics" id="metrics"></div>
+    <div class="tablewrap">
+      <table id="tbl">
+        <caption id="tbl-cap"></caption>
+        <thead><tr id="thead-row"></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="notes">
+    <div class="note">
+      <h3>Что именно считается</h3>
+      <p>Проводимость ячейки хранит вес. Ток через ячейку <code>I = V·G</code> — это умножение. Токи всех ячеек столбца складываются в проводнике по закону сохранения заряда — это суммирование. Один столбец = одно скалярное произведение; вся решётка = матрично-векторное умножение за одно физическое установление.</p>
+      <p>На схеме видно, как ток в разрядной линии <em>накапливается</em> сверху вниз: сегмент светлеет с каждой пройденной строкой. Это и есть суммирование, происходящее в металле.</p>
+    </div>
+    <div class="note">
+      <h3>Идеальный результат для сравнения</h3>
+      <p>Колонка «идеал» в таблице — это тот же скалярный продукт, посчитанный в плавающей точке по <em>целевым</em> весам: без ошибки записи, без дрейфа, без шума и без квантования. Разница между ним и аналоговым выходом — цена, которую платит физическое вычисление.</p>
+      <p>Сдвиньте ползунок времени и посмотрите на RMS-погрешность. Затем включите компенсацию: единый цифровой множитель возвращает часть точности — но только часть, потому что показатель дрейфа <code>ν</code> у каждой ячейки свой, а множитель один на всех.</p>
+    </div>
+    <div class="note">
+      <h3>Что показывает калиброванная модель</h3>
+      <p>Слабые состояния деградируют несоизмеримо быстрее сильных. При максимальной проводимости 20.7 мкСм показатель дрейфа <code>ν ≈ 0.017</code>, и через год ячейка сохраняет около 82 % значения. При 0.2 мкСм <code>ν</code> упирается в верхнюю границу <code>0.13</code> — остаётся 22 %.</p>
+      <p>С шумом чтения та же картина: за год он набирает около 7 % на сильных состояниях и свыше 22 % на слабых. Отсюда практический вывод — нижнюю часть диапазона проводимости лучше не использовать вовсе.</p>
+    </div>
+    <div class="note warn">
+      <h3>Чего в этой модели нет</h3>
+      <p>Главное упущение — <strong>падение напряжения на самих проводниках</strong>. Здесь линии идеальны, поэтому все ячейки строки видят одно напряжение. В настоящей решётке 256×256 сопротивление металла съедает потенциал по мере удаления от драйвера. Это одна из причин, почему решётки не масштабируют бесконечно.</p>
+      <p>Также не смоделированы: залипшие ячейки, нелинейность самого АЦП, температурная зависимость и модуляция входа длительностью импульса — реальный чип подаёт вход как <code>PWM</code>, а не амплитудой. На результат умножения это не влияет, произведение то же самое.</p>
+    </div>
+    <div class="note warn" id="note-fluid" hidden>
+      <h3>Оговорка о сверхтекучести</h3>
+      <p>Флюидный режим считает по закону Гагена–Пуазёйля с вязкостью <code>η</code> — это корректно для нормального жидкого гелия He I. Настоящий сверхтекучий He II <strong>не подчиняется Пуазёйлю</strong>: у сверхтекучей компоненты вязкость равна нулю, течение ограничено критической скоростью и квантованными вихрями, и описывается двухжидкостной моделью, а не линейной проводимостью.</p>
+      <p>Так что этот режим показывает верную <em>структуру</em> изоморфизма — потенциал, поток, закон сохранения в узле — но не количественную физику He II.</p>
+    </div>
+  </div>
+
+  <p class="colophon">
+    <strong>Что откуда.</strong> Модели записи, дрейфа и шума чтения — дословный перенос формул и коэффициентов из
+    <a href="https://github.com/IBM/aihwkit">IBM AIHWKit</a> (лицензия MIT), файлы <span class="num">inference/noise/hermes.py</span>, <span class="num">pcm.py</span>, <span class="num">reram.py</span>.
+    Перенос сверен с оригинальным кодом покоэффициентно: максимальное относительное расхождение <span class="num">2·10⁻¹⁰</span>.
+    Сами коэффициенты откалиброваны IBM на кристалле HERMES Project Chip —
+    <a href="https://www.nature.com/articles/s41928-023-01010-1">Le Gallo et al., Nature Electronics 2023</a>; методика статистического моделирования — Nandakumar et al., ICECS 2019.
+    Оттуда же системные цифры: 64 ядра, 256×256 на ядро, 133 нс на MVM, 1.55 TOPS/мм², 9.76 TOPS/Вт.
+    Флюидный режим — <em>не от IBM</em>: это модель Гагена–Пуазёйля, написанная здесь по аналогии, со своими оговорками ниже.
+    Решётка 8×8 взята ради читаемости; эффекты вроде падения напряжения на линиях проявляются только на больших матрицах.
+  </p>
+
+</div>
+
+<script>
+(() => {
+"use strict";
+
+/* ══ Библиотека устройств ═══════════════════════════════════════════
+   Электрические модели — прямой перенос формул и коэффициентов из
+   IBM AIHWKit (MIT): src/aihwkit/inference/noise/{hermes,pcm,reram}.py
+   Проверено на совпадение с оригиналом: max|Δ| = 2.2e-16.            */
+const LIB = {
+  hermes2: {
+    carrier: "electrical", model: "hermes", numDev: 2,
+    name: "PCM · IBM HERMES, 2 устройства на вес",
+    gmin: 0, gmax: 20.7,                                  // мкСм
+    drive: 0.2,                                            // В (в чипе — PWM)
+    progCoeff: [0.16603222, 4.71806468, -8.48101252, 4.68961419],
+    progRef: 20.7,
+    t0: 300, tRead: 512e-9,
+    bits: 8, latency: 133, tops_w: 9.76,
+    cite: "Модель откалибрована IBM на кристалле HERMES Project Chip (Le Gallo et al., Nature Electronics 2023). Два устройства на вес — метод MSF, даёт более точную запись и меньший разброс дрейфа. Максимальная охарактеризованная проводимость 20.7 мкСм, опорное время дрейфа 300 с.",
+    extra: [["Материал", "GST (Ge₂Sb₂Te₅)"], ["Опорное время t₀", "300 с"], ["Окно чтения", "512 нс"]]
+  },
+  hermes1: {
+    carrier: "electrical", model: "hermes", numDev: 1,
+    name: "PCM · IBM HERMES, 1 устройство на вес",
+    gmin: 0, gmax: 10.35,
+    drive: 0.2,
+    progCoeff: [0.15781817, 2.32443916, -2.16310839, 0.68841818],
+    progRef: 10.35,
+    t0: 200, tRead: 512e-9,
+    bits: 8, latency: 133, tops_w: 9.76,
+    cite: "Тот же кристалл, но одно устройство на вес: обычная схема записи вместо MSF. Вдвое меньше охарактеризованный диапазон (10.35 мкСм) и заметно больший разброс показателя дрейфа.",
+    extra: [["Материал", "GST (Ge₂Sb₂Te₅)"], ["Опорное время t₀", "200 с"], ["Окно чтения", "512 нс"]]
+  },
+  pcmgen: {
+    carrier: "electrical", model: "pcm",
+    name: "PCM · обобщённая модель IBM",
+    gmin: 0, gmax: 25,
+    drive: 0.2,
+    progCoeff: [0.26348, 1.9650, -1.1731],
+    progRef: 25,
+    t0: 20, tRead: 250e-9,
+    bits: 8,
+    cite: "Обобщённая модель PCMLikeNoiseModel, снятая с реальных устройств PCM (Nandakumar et al., ICECS 2019). Не привязана к конкретному кристаллу — базовая линия для сравнения.",
+    extra: [["Опорное время t₀", "20 с"], ["Окно чтения", "250 нс"]]
+  },
+  reram: {
+    carrier: "electrical", model: "reram",
+    name: "ReRAM · аналоговая, модель IBM",
+    gmin: 0, gmax: 40,
+    drive: 0.2,
+    progRef: 40,
+    // Полиномы подогнаны только к трём моментам времени
+    reramCoeff: {
+      1:      [0.348, 16.030, -43.853, 45.393, -16.815],
+      86400:  [0.701, 22.086, -50.773, 47.095, -16.458],
+      172800: [0.782, 20.274, -43.507, 37.062, -11.934]
+    },
+    t0: 1, tRead: 250e-9,
+    bits: 8,
+    cite: "ReRAM не показывает дрейф в обычном смысле: IBM описывает её одним полиномом разброса, подогнанным к измерениям на 1 с, 1 сутки и 2 суток. Между этими точками здесь идёт интерполяция по логарифму времени, дальше 2 суток кривая удерживается — за пределами подгонки данных нет.",
+    extra: [["Материал", "оксидная филамент."], ["Охарактеризовано", "1 с · 1 сут · 2 сут"]]
+  },
+  he: {
+    carrier: "fluidic", model: "fluidic",
+    name: "Микроканал · жидкий He I, 2.2 К",
+    eta: 1.3e-6,                 // Па·с
+    rmax: 5e-6,                  // м
+    rmin: 0.8e-6,
+    L: 200e-6,                   // м
+    drive: 1000,                 // Па
+    sigProg: 0.05e-6,            // м, допуск на радиус
+    sigRead: 0.001,
+    nu: 0,
+    bits: 8,
+    cite: "Геометрия канала не дрейфует — показатель ν равен нулю. Зато проводимость идёт как r⁴, поэтому допуск на радиус в 1 % даёт около 4 % ошибки веса.",
+    extra: [["Вязкость η", "1.3·10⁻⁶ Па·с"], ["Канал", "r ≤ 5 мкм, L = 200 мкм"]]
+  },
+  water: {
+    carrier: "fluidic", model: "fluidic",
+    name: "Микроканал · вода, 20 °C",
+    eta: 1.0e-3,
+    rmax: 5e-6,
+    rmin: 0.8e-6,
+    L: 200e-6,
+    drive: 1000,
+    sigProg: 0.05e-6,
+    sigRead: 0.002,
+    nu: 0,
+    bits: 8,
+    cite: "Та же геометрия, но вязкость в 770 раз выше — при том же перепаде давления поток во столько же раз меньше. Наглядная причина уходить в криогенику.",
+    extra: [["Вязкость η", "1.0·10⁻³ Па·с"], ["Канал", "r ≤ 5 мкм, L = 200 мкм"]]
+  }
+};
+
+const N = 8;                              // размер решётки
+const T0 = 1;                             // с, опорное время дрейфа
+const TMAX = 3.156e8;                     // с ≈ 10 лет
+
+/* ══ Состояние ══════════════════════════════════════════════════════ */
+const S = {
+  carrier: "electrical",
+  devKey: "hermes2",
+  W: [],                                  // целевые веса 0..1
+  V: [],                                  // вход 0..1
+  tIdx: 0,
+  flags: { prog: true, noise: true, adc: true, comp: false },
+  seedProg: 12345,
+  seedRead: 999,
+  hoverRow: -1,
+  hoverCol: -1,
+  cam: { yaw: -0.62, pitch: 0.52, zoom: 1 }
+};
+
+const dev = () => LIB[S.devKey];
+const timeSec = () => S.tIdx === 0 ? 0 : Math.pow(TMAX, S.tIdx / 100);
+
+/* ══ Детерминированный ГПСЧ (чтобы картинка не дрожала) ═════════════ */
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function gaussFrom(rng) {
+  let u = 0, v = 0;
+  while (u === 0) u = rng();
+  while (v === 0) v = rng();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+/* ══ Физика ═════════════════════════════════════════════════════════
+   Электрические модели — формулы и коэффициенты перенесены дословно из
+   IBM AIHWKit (MIT), src/aihwkit/inference/noise/{hermes,pcm,reram}.py  */
+
+const clampv = (x, a, b) => Math.min(Math.max(x, a), b);
+
+// Целевая проводимость из веса. мкСм (эл.) либо нЛ/(Па·с) (флюид.)
+function targetG(w) {
+  const d = dev();
+  if (d.carrier === "electrical") return d.gmin + w * (d.gmax - d.gmin);
+  return condFromRadius(radiusFromWeight(w, d), d);
+}
+function condFromRadius(r, d) {
+  // Гаген–Пуазёйль: C = π r⁴ / (8 η L)  [м³/(Па·с)] → нЛ/(Па·с) ×1e12
+  return (Math.PI * Math.pow(r, 4)) / (8 * d.eta * d.L) * 1e12;
+}
+function radiusFromWeight(w, d) {
+  return d.rmin + Math.pow(w, 0.25) * (d.rmax - d.rmin);
+}
+
+// σ ошибки записи: Σ cᵢ·(g/gmax)ⁱ, затем масштаб gmax/ref   [мкСм]
+function progSigma(g, d) {
+  let s = d.progCoeff[0], m = 1;
+  for (let i = 1; i < d.progCoeff.length; i++) { m *= g / d.gmax; s += m * d.progCoeff[i]; }
+  return s * (d.gmax / d.progRef);
+}
+
+// Показатель дрейфа ν: среднее и разброс зависят от состояния ячейки
+function driftNuStats(g, d) {
+  const r = Math.max(Math.abs(g / d.gmax), 1e-7), L = Math.log(r);
+  let mu, sg;
+  if (d.model === "hermes") {
+    mu = r < 0.0945 ? clampv(-0.0387 * L - 0.0182, 0.0720, 0.13)
+                    : -0.0436 * r * r - 0.0126 * r + 0.0736;
+    sg = d.numDev === 1
+      ? (r < 0.3039 ? clampv(-0.0120 * L - 0.0023, 0.0124, 0.04)
+                    : -0.0165 * r * r + 0.0116 * r + 0.0104)
+      : (r < 0.3055 ? clampv(-0.0117 * L - 0.0057, 0.0091, 0.04)
+                    : -0.0118 * r * r + 0.0093 * r + 0.0073);
+  } else {
+    mu = clampv(-0.0155 * L + 0.0244, 0.049, 0.1);
+    sg = clampv(-0.0125 * L - 0.0059, 0.008, 0.045);
+  }
+  return [mu, sg];
+}
+
+// Накопленный шум чтения 1/f — доля от G, растёт как √ln t
+function readSigma(g, d, t) {
+  const r = Math.abs(g) / d.gmax, L = Math.log(Math.max(r, 1e-12));
+  let q;
+  if (d.model === "hermes") {
+    q = d.numDev === 1
+      ? (r < 0.1591 ? clampv(-0.0078 * L + 0.0038, 0.0179, 0.04)
+                    : 0.0664 * Math.pow(r, 3) - 0.1352 * r * r + 0.0768 * r + 0.0088)
+      : (r < 0.16   ? clampv(-0.0117 * L - 0.0069, 0.015, 0.04)
+                    : 0.0069 * Math.pow(r, 3) - 0.0280 * r * r + 0.0211 * r + 0.0123);
+  } else {
+    q = Math.min(0.0088 / Math.max(Math.pow(r, 0.65), 1e-3), 0.2);
+  }
+  return q * Math.sqrt(Math.log((t + d.tRead) / (2 * d.tRead)));
+}
+
+// ReRAM: один полином разброса на момент времени; дрейфа как такового нет
+function reramSigma(g, d, tInf) {
+  const ks = Object.keys(d.reramCoeff).map(Number).sort((a, b) => a - b);
+  const t = clampv(Math.max(tInf, ks[0]), ks[0], ks[ks.length - 1]);
+  let lo = ks[0], hi = ks[ks.length - 1];
+  for (let i = 0; i < ks.length - 1; i++)
+    if (t >= ks[i] && t <= ks[i + 1]) { lo = ks[i]; hi = ks[i + 1]; }
+  const f = hi === lo ? 0 : (Math.log(t) - Math.log(lo)) / (Math.log(hi) - Math.log(lo));
+  const poly = c => {
+    let s = c[0], m = 1;
+    for (let i = 1; i < c.length; i++) { m *= g / d.gmax; s += m * c[i]; }
+    return s;
+  };
+  return (poly(d.reramCoeff[lo]) * (1 - f) + poly(d.reramCoeff[hi]) * f) * (d.gmax / d.progRef);
+}
+
+function compute() {
+  const d = dev();
+  const tInf = timeSec();                    // время с момента записи
+  const tAbs = tInf + (d.t0 || 1);           // абсолютное время модели IBM
+
+  const rngP = mulberry32(S.seedProg);
+  const rngN = mulberry32(S.seedProg + 4177);   // ν разыгрывается при записи
+  const rngR = mulberry32(S.seedRead + S.tIdx * 7919);
+
+  const gT = [], gNow = [], iCell = [], nuMap = [];
+  const gLo = d.carrier === "electrical" ? d.gmin : condFromRadius(d.rmin, d);
+  const gHi = d.carrier === "electrical" ? d.gmax : condFromRadius(d.rmax, d);
+
+  let retSum = 0, retN = 0, nuSum = 0, nuN = 0;
+  let sigProgLo = Infinity, sigProgHi = 0, rdLo = Infinity, rdHi = 0;
+
+  for (let i = 0; i < N; i++) {
+    gT[i] = []; gNow[i] = []; iCell[i] = []; nuMap[i] = [];
+    for (let j = 0; j < N; j++) {
+      const w = S.W[i][j];
+      const gt = targetG(w);
+      gT[i][j] = gt;
+
+      let gp = gt, g, nu = 0;
+
+      if (d.model === "fluidic") {
+        if (S.flags.prog) {
+          // допуск идёт по радиусу, а проводимость ∝ r⁴
+          const r = radiusFromWeight(w, d) + gaussFrom(rngP) * d.sigProg;
+          gp = condFromRadius(Math.max(r, d.rmin * 0.3), d);
+        } else { rngP(); rngP(); }
+        g = gp;                                          // геометрия не дрейфует
+        if (S.flags.noise) g *= (1 + gaussFrom(rngR) * d.sigRead);
+        else { rngR(); rngR(); }
+        rngN(); rngN();
+
+      } else if (d.model === "reram") {
+        const sg = S.flags.noise ? reramSigma(gt, d, Math.max(tInf, 1))
+                 : (S.flags.prog ? reramSigma(gt, d, 1) : 0);
+        sigProgLo = Math.min(sigProgLo, sg); sigProgHi = Math.max(sigProgHi, sg);
+        gp = gt + (sg ? gaussFrom(rngP) * sg : (rngP(), rngP(), 0));
+        g = gp;
+        rngN(); rngN(); rngR(); rngR();
+
+      } else {
+        // PCM / HERMES — три стадии по модели IBM
+        const sp = progSigma(gt, d);
+        sigProgLo = Math.min(sigProgLo, sp); sigProgHi = Math.max(sigProgHi, sp);
+        if (S.flags.prog) gp = gt + gaussFrom(rngP) * sp;
+        else { rngP(); rngP(); }
+        gp = Math.max(gp, 0);
+
+        const st = driftNuStats(gp, d);
+        nu = Math.max(Math.abs(st[0] + st[1] * gaussFrom(rngN)), 0);
+        nuSum += nu; nuN++;
+        g = tInf > 0 ? gp * Math.pow(tAbs / d.t0, -nu) : gp;
+
+        const rs = readSigma(gp, d, tAbs);
+        rdLo = Math.min(rdLo, rs); rdHi = Math.max(rdHi, rs);
+        if (S.flags.noise) g += Math.abs(g) * rs * gaussFrom(rngR);
+        else { rngR(); rngR(); }
+      }
+
+      g = Math.max(g, 0);
+      nuMap[i][j] = nu;
+      if (gt > gHi * 0.02) { retSum += g / gt; retN++; }
+
+      gNow[i][j] = g;
+      iCell[i][j] = S.V[i] * d.drive * g;
+    }
+  }
+
+  const retained = retN ? retSum / retN : 1;
+  const nuMean = nuN ? nuSum / nuN : 0;
+
+  // Полная шкала АЦП и суммы по столбцам
+  const fs = N * d.drive * gHi;
+  const analog = [], ideal = [], out = [], codes = [], err = [];
+  const levels = Math.pow(2, d.bits) - 1;
+
+  for (let j = 0; j < N; j++) {
+    let a = 0, id = 0;
+    for (let i = 0; i < N; i++) {
+      a += iCell[i][j];
+      id += S.V[i] * d.drive * gT[i][j];
+    }
+    // Компенсация — единый цифровой множитель на весь выход.
+    // Показатель ν у каждой ячейки свой, поэтому один множитель
+    // не может исправить всё: это видно по остаточной погрешности.
+    let o = (S.flags.comp && retained > 0.02) ? a / retained : a;
+
+    let code = null;
+    if (S.flags.adc) {
+      code = Math.round(clampv(o / fs, 0, 1) * levels);
+      o = code / levels * fs;
+    }
+    analog.push(a); ideal.push(id); out.push(o); codes.push(code); err.push((o - id) / fs * 100);
+  }
+
+  const rms = Math.sqrt(err.reduce((s, e) => s + e * e, 0) / N);
+  const maxAbs = Math.max.apply(null, err.map(Math.abs));
+  const enob = rms > 1e-9 ? Math.max(0, Math.log2(100 / rms)) : d.bits;
+
+  return { d, t: tInf, tAbs, retained, nuMean, gT, gNow, iCell, nuMap, fs,
+           analog, ideal, out, codes, err, rms, maxAbs, enob, gHi, gLo,
+           sigProgLo: isFinite(sigProgLo) ? sigProgLo : 0, sigProgHi,
+           rdLo: isFinite(rdLo) ? rdLo : 0, rdHi };
+}
+
+/* ══ Отрисовка 3D ═══════════════════════════════════════════════════ */
+const cv = document.getElementById("cv");
+const ctx = cv.getContext("2d");
+let CSSW = 800, CSSH = 550;
+
+const PITCH = 30, ZTOP = 15, ZBOT = -15, EXT = 34, FOV = 620;
+
+let THEME = {};
+function readTheme() {
+  const cs = getComputedStyle(document.documentElement);
+  const g = n => cs.getPropertyValue(n).trim();
+  THEME = {
+    bg: g("--canvas-bg"),
+    base: g("--wire-base"),
+    accent: g("--accent"),
+    hot: g("--accent-hot"),
+    ink: g("--ink"),
+    ink2: g("--ink-2"),
+    ink3: g("--ink-3"),
+    line: g("--line"),
+    surface: g("--surface"),
+    glow: g("--glow").trim() === "1"
+  };
+  THEME.baseRGB = toRGB(THEME.base);
+  THEME.accRGB = toRGB(THEME.accent);
+  THEME.hotRGB = toRGB(THEME.hot);
+}
+function toRGB(c) {
+  const p = document.createElement("canvas").getContext("2d");
+  p.fillStyle = "#000"; p.fillStyle = c;
+  const s = p.fillStyle;
+  if (s[0] === "#") {
+    const h = s.length === 4
+      ? s.slice(1).split("").map(x => parseInt(x + x, 16))
+      : [parseInt(s.slice(1, 3), 16), parseInt(s.slice(3, 5), 16), parseInt(s.slice(5, 7), 16)];
+    return h;
+  }
+  const m = s.match(/\d+/g);
+  return m ? m.slice(0, 3).map(Number) : [128, 128, 128];
+}
+function mix(a, b, t) { return a.map((v, i) => Math.round(v + (b[i] - v) * t)); }
+function fluxColor(t) {
+  t = Math.min(Math.max(t, 0), 1);
+  const c = t < 0.62
+    ? mix(THEME.baseRGB, THEME.accRGB, t / 0.62)
+    : mix(THEME.accRGB, THEME.hotRGB, (t - 0.62) / 0.38);
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+
+function proj(x, y, z) {
+  const { yaw, pitch, zoom } = S.cam;
+  const cy = Math.cos(yaw), sy = Math.sin(yaw);
+  const X = x * cy - y * sy;
+  const Y1 = x * sy + y * cy;
+  const cp = Math.cos(pitch), sp = Math.sin(pitch);
+  const Z = z * cp - Y1 * sp;
+  const D = z * sp + Y1 * cp;
+  const f = FOV / (FOV + D) * zoom;
+  return { x: CSSW / 2 + X * f, y: CSSH / 2 - Z * f, d: D, f };
+}
+
+function draw(R) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  if (cv.width !== Math.round(CSSW * dpr) || cv.height !== Math.round(CSSH * dpr)) {
+    cv.width = Math.round(CSSW * dpr);
+    cv.height = Math.round(CSSH * dpr);
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, CSSW, CSSH);
+  ctx.fillStyle = THEME.bg;
+  ctx.fillRect(0, 0, CSSW, CSSH);
+
+  const cellRef = R.d.drive * R.gHi;            // максимум тока одной ячейки
+  const rowRef  = N * cellRef;                  // максимум по линии
+  const segs = [];
+
+  const px = j => (j - (N - 1) / 2) * PITCH;
+  const py = i => (i - (N - 1) / 2) * PITCH;
+
+  // Опорная рамка на нижней плоскости
+  const frame = [[-EXT, -EXT], [EXT, -EXT], [EXT, EXT], [-EXT, EXT]];
+  ctx.strokeStyle = THEME.line;
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.5;
+  ctx.beginPath();
+  frame.forEach((p, k) => {
+    const q = proj(p[0], p[1], ZBOT - 10);
+    k ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y);
+  });
+  ctx.closePath(); ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // ── Сегменты строк (словарные линии, z = ZTOP).
+  // Ток входит слева и убывает: каждая ячейка отводит свою долю вниз.
+  for (let i = 0; i < N; i++) {
+    for (let k = 0; k <= N; k++) {
+      let cur = 0;
+      for (let m = k; m < N; m++) cur += R.iCell[i][m];
+      const x0 = k === 0 ? -EXT : px(k - 1);
+      const x1 = k === N ? EXT : px(k);
+      segs.push({
+        a: [x0, py(i), ZTOP], b: [x1, py(i), ZTOP],
+        t: cur / rowRef, w: 2.4, row: i, col: -1
+      });
+    }
+  }
+
+  // ── Сегменты столбцов (разрядные линии, z = ZBOT).
+  // Ток накапливается: сегмент после строки i несёт сумму строк 0..i.
+  for (let j = 0; j < N; j++) {
+    for (let k = 0; k <= N; k++) {
+      let cur = 0;
+      for (let m = 0; m < k; m++) cur += R.iCell[m][j];
+      const y0 = k === 0 ? -EXT : py(k - 1);
+      const y1 = k === N ? EXT : py(k);
+      segs.push({
+        a: [px(j), y0, ZBOT], b: [px(j), y1, ZBOT],
+        t: cur / rowRef, w: 2.4, row: -1, col: j
+      });
+    }
+  }
+
+  // ── Ячейки: вертикальные столбики между линиями
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < N; j++) {
+      segs.push({
+        a: [px(j), py(i), ZTOP], b: [px(j), py(i), ZBOT],
+        t: R.iCell[i][j] / cellRef, w: 4.2, row: i, col: j, cell: true
+      });
+    }
+  }
+
+  // Сортировка по глубине — дальние рисуются первыми
+  const drawn = segs.map(s => {
+    const A = proj(s.a[0], s.a[1], s.a[2]);
+    const B = proj(s.b[0], s.b[1], s.b[2]);
+    return { s, A, B, depth: (A.d + B.d) / 2 };
+  }).sort((p, q) => q.depth - p.depth);
+
+  ctx.lineCap = "round";
+  for (const { s, A, B } of drawn) {
+    const t = Math.min(Math.max(s.t, 0), 1);
+    const vis = Math.pow(t, 0.55);
+    const dim = (S.hoverRow >= 0 || S.hoverCol >= 0) &&
+                !(s.row === S.hoverRow || s.col === S.hoverCol);
+
+    ctx.globalAlpha = dim ? 0.13 : (0.4 + 0.6 * vis);
+    ctx.strokeStyle = fluxColor(vis);
+    ctx.lineWidth = s.w * ((A.f + B.f) / 2) * (0.75 + 0.55 * vis);
+
+    if (THEME.glow && vis > 0.18 && !dim) {
+      ctx.shadowBlur = 14 * vis;
+      ctx.shadowColor = fluxColor(Math.min(vis + 0.25, 1));
+    } else { ctx.shadowBlur = 0; }
+
+    ctx.beginPath();
+    ctx.moveTo(A.x, A.y);
+    ctx.lineTo(B.x, B.y);
+    ctx.stroke();
+  }
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = 1;
+
+  // ── Драйверы входа слева
+  const isEl = R.d.carrier === "electrical";
+  for (let i = 0; i < N; i++) {
+    const p = proj(-EXT - 9, py(i), ZTOP);
+    const on = S.hoverRow === i;
+    ctx.fillStyle = on ? THEME.accent : THEME.ink3;
+    ctx.font = `500 ${Math.max(8.5, 10.5 * p.f)}px "IBM Plex Mono", monospace`;
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    const v = S.V[i] * R.d.drive;
+    ctx.fillText(isEl ? v.toFixed(2) + " В" : (v / 1000).toFixed(2) + " кПа", p.x, p.y);
+  }
+
+  // ── АЦП / приёмники на выходе столбцов
+  for (let j = 0; j < N; j++) {
+    const p = proj(px(j), EXT + 13, ZBOT);
+    const on = S.hoverCol === j;
+    const frac = Math.min(R.out[j] / R.fs, 1);
+    const bw = 26 * p.f, bh = 5.5 * p.f;
+
+    ctx.fillStyle = THEME.line;
+    ctx.fillRect(p.x - bw / 2, p.y - bh / 2, bw, bh);
+    ctx.fillStyle = on ? THEME.hot : THEME.accent;
+    ctx.fillRect(p.x - bw / 2, p.y - bh / 2, bw * frac, bh);
+
+    ctx.fillStyle = on ? THEME.ink : THEME.ink2;
+    ctx.font = `500 ${Math.max(8.5, 10.5 * p.f)}px "IBM Plex Mono", monospace`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    const lbl = R.codes[j] !== null ? String(R.codes[j]) : R.out[j].toFixed(1);
+    ctx.fillText(lbl, p.x, p.y + bh);
+  }
+
+  // Подпись оси суммирования
+  const cap = proj(0, EXT + 30, ZBOT);
+  ctx.fillStyle = THEME.ink3;
+  ctx.font = `600 ${Math.max(8, 9.5 * cap.f)}px "IBM Plex Mono", monospace`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  ctx.fillText(S.flags.adc ? "КОД АЦП" : (isEl ? "ТОК СТОЛБЦА" : "ПОТОК СТОЛБЦА"), cap.x, cap.y);
+}
+
+/* ══ Интерфейс ══════════════════════════════════════════════════════ */
+const U = {
+  dev: document.getElementById("dev"),
+  spec: document.getElementById("spec"),
+  cite: document.getElementById("cite"),
+  metrics: document.getElementById("metrics"),
+  tbody: document.getElementById("tbody"),
+  thead: document.getElementById("thead-row"),
+  cap: document.getElementById("tbl-cap"),
+  vec: document.getElementById("vec"),
+  wgrid: document.getElementById("wgrid"),
+  legHi: document.getElementById("leg-hi"),
+  legLo: document.getElementById("leg-lo"),
+  vecTitle: document.getElementById("vec-title"),
+  wTitle: document.getElementById("w-title"),
+  noteFluid: document.getElementById("note-fluid")
+};
+
+const UNITS = {
+  electrical: { pot: "В", flux: "мкА", cond: "мкСм", potName: "Напряжение", fluxName: "Ток", condName: "Проводимость" },
+  fluidic:    { pot: "кПа", flux: "нЛ/с", cond: "нЛ/(Па·с)", potName: "Давление", fluxName: "Поток", condName: "Гидропроводимость" }
+};
+const u = () => UNITS[S.carrier];
+
+function fmt(x, digits = 2) {
+  if (!isFinite(x)) return "—";
+  if (Math.abs(x) >= 1000) return x.toFixed(0);
+  if (Math.abs(x) >= 100) return x.toFixed(1);
+  return x.toFixed(digits);
+}
+function fmtTime(s) {
+  if (s < 90) return fmt(s, 0) + " с";
+  if (s < 5400) return fmt(s / 60, 0) + " мин";
+  if (s < 172800) return fmt(s / 3600, 1) + " ч";
+  if (s < 5.2e6) return fmt(s / 86400, 1) + " сут";
+  if (s < 6.3e7) return fmt(s / 2.63e6, 1) + " мес";
+  return fmt(s / 3.156e7, 1) + " лет";
+}
+
+function buildDevSelect() {
+  U.dev.innerHTML = "";
+  for (const [k, d] of Object.entries(LIB)) {
+    if (d.carrier !== S.carrier) continue;
+    const o = document.createElement("option");
+    o.value = k; o.textContent = d.name;
+    U.dev.appendChild(o);
+  }
+  U.dev.value = S.devKey;
+}
+
+function buildVec() {
+  U.vec.innerHTML = "";
+  for (let i = 0; i < N; i++) {
+    const bar = document.createElement("div");
+    bar.className = "vec-bar";
+    bar.innerHTML = `<div class="col"><div class="fill"></div></div><span class="ix">${i}</span>`;
+    bar.title = `Строка ${i}`;
+    const set = ev => {
+      const r = bar.querySelector(".col").getBoundingClientRect();
+      const y = (ev.touches ? ev.touches[0].clientY : ev.clientY);
+      S.V[i] = Math.min(Math.max(1 - (y - r.top) / r.height, 0), 1);
+      refresh();
+    };
+    bar.addEventListener("pointerdown", e => {
+      bar.setPointerCapture(e.pointerId); set(e); e.preventDefault();
+    });
+    bar.addEventListener("pointermove", e => { if (bar.hasPointerCapture(e.pointerId)) set(e); });
+    bar.addEventListener("pointerenter", () => { S.hoverRow = i; refresh(); });
+    bar.addEventListener("pointerleave", e => {
+      if (!bar.hasPointerCapture?.(e.pointerId)) { S.hoverRow = -1; refresh(); }
+    });
+    U.vec.appendChild(bar);
+  }
+}
+
+function paintVec() {
+  [...U.vec.children].forEach((bar, i) => {
+    bar.querySelector(".fill").style.height = (S.V[i] * 100) + "%";
+    bar.classList.toggle("on", S.hoverRow === i);
+  });
+}
+
+function buildWGrid() {
+  U.wgrid.style.gridTemplateColumns = `repeat(${N}, 1fr)`;
+  U.wgrid.innerHTML = "";
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < N; j++) {
+      const c = document.createElement("div");
+      c.className = "wcell";
+      c.dataset.i = i; c.dataset.j = j;
+      c.addEventListener("pointerenter", () => { S.hoverRow = i; S.hoverCol = j; refresh(); });
+      c.addEventListener("pointerleave", () => { S.hoverRow = -1; S.hoverCol = -1; refresh(); });
+      U.wgrid.appendChild(c);
+    }
+  }
+}
+
+function paintWGrid(R) {
+  [...U.wgrid.children].forEach(c => {
+    const i = +c.dataset.i, j = +c.dataset.j;
+    const t = Math.pow(Math.min(R.gNow[i][j] / R.gHi, 1), 0.6);
+    c.style.background = fluxColor(t);
+    c.classList.toggle("hl", S.hoverRow === i && S.hoverCol === j);
+    c.title = `w[${i}][${j}] = ${S.W[i][j].toFixed(3)} → ${u().condName} ${fmt(R.gNow[i][j], 3)} ${u().cond}`;
+  });
+}
+
+function paintSpec(R) {
+  const d = R.d;
+  const rows = [];
+  if (d.carrier === "electrical") {
+    rows.push([u().condName, `${d.gmin} – ${d.gmax} ${u().cond}`]);
+    rows.push(["Напряжение чтения", `${d.drive} В`]);
+    rows.push(["σ записи", `${fmt(R.sigProgLo, 2)} – ${fmt(R.sigProgHi, 2)} ${u().cond}`]);
+    if (d.model !== "reram") {
+      rows.push(["ν дрейфа, средний", fmt(R.nuMean, 3)]);
+      rows.push(["Шум чтения сейчас", `${fmt(R.rdLo * 100, 1)} – ${fmt(R.rdHi * 100, 1)} %`]);
+    } else {
+      rows.push(["Дрейф", "не проявляется"]);
+    }
+  } else {
+    rows.push([u().condName, `${fmt(R.gLo, 3)} – ${fmt(R.gHi, 2)} ${u().cond}`]);
+    rows.push(["Перепад давления", `${d.drive / 1000} кПа`]);
+    rows.push(["Допуск на радиус", `±${(d.sigProg * 1e9).toFixed(0)} нм`]);
+    rows.push(["Дрейф геометрии", "отсутствует"]);
+  }
+  rows.push(["Разрядность АЦП", `${d.bits} бит`]);
+  if (d.latency) rows.push(["Латентность MVM", `${d.latency} нс`]);
+  if (d.tops_w) rows.push(["Энергоэффективность", `${d.tops_w} TOPS/Вт`]);
+  (d.extra || []).forEach(e => rows.push(e));
+
+  U.spec.innerHTML = rows.map(r => `<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join("");
+  U.cite.textContent = d.cite;
+
+  document.getElementById("v-prog").textContent =
+    d.carrier === "electrical"
+      ? `σ ${fmt(R.sigProgLo, 2)}–${fmt(R.sigProgHi, 2)}`
+      : `σr ${(d.sigProg * 1e9).toFixed(0)} нм`;
+  document.getElementById("v-noise").textContent =
+    d.carrier === "electrical" && d.model !== "reram"
+      ? `${fmt(R.rdLo * 100, 1)}–${fmt(R.rdHi * 100, 1)} %`
+      : (d.model === "reram" ? "в полиноме" : `${(d.sigRead * 100).toFixed(1)} %`);
+  document.getElementById("v-adc").textContent = `${d.bits} бит`;
+}
+
+function paintMetrics(R) {
+  const d = R.d;
+  const ops = 2 * N * N;
+  const energy = d.tops_w ? (ops / (d.tops_w * 1e12)) * 1e12 : null;  // пДж
+  const items = [
+    { k: "RMS-погрешность", v: fmt(R.rms, 2), u: "% ш.к.",
+      cls: R.rms > 3 ? "is-bad" : (R.rms < 0.6 ? "is-good" : "") },
+    { k: "Макс. отклонение", v: fmt(R.maxAbs, 2), u: "% ш.к.",
+      cls: R.maxAbs > 5 ? "is-bad" : "" },
+    { k: "Эффект. разрядность", v: fmt(R.enob, 1), u: "бит",
+      cls: R.enob < 4 ? "is-bad" : (R.enob > 7 ? "is-good" : "") },
+    { k: "Сохранено проводимости", v: (R.retained * 100).toFixed(1), u: "% от G₀",
+      cls: R.retained < 0.6 ? "is-bad" : (R.retained > 0.97 ? "is-good" : "") },
+    { k: "Прошло времени", v: fmtTime(R.t).split(" ")[0], u: fmtTime(R.t).split(" ")[1] }
+  ];
+  if (energy) items.push({ k: `Энергия на MVM ${N}×${N}`, v: fmt(energy, 2), u: "пДж" });
+  if (d.carrier === "fluidic") {
+    const total = R.out.reduce((a, b) => a + b, 0);
+    items.push({ k: "Суммарный расход", v: fmt(total, 1), u: "нЛ/с" });
+  }
+
+  U.metrics.innerHTML = items.map(m =>
+    `<div class="metric ${m.cls || ""}"><span class="k">${m.k}</span>
+     <span class="v">${m.v}<span class="u">${m.u}</span></span></div>`
+  ).join("");
+}
+
+function paintTable(R) {
+  const U_ = u();
+  U.cap.textContent = `Результат по столбцам · ${R.d.name}`;
+  U.thead.innerHTML = `
+    <th>Столбец</th>
+    <th>Σ${U_.condName.toLowerCase()}, ${U_.cond}</th>
+    <th>${U_.fluxName} аналог., ${U_.flux}</th>
+    <th>Идеал, ${U_.flux}</th>
+    <th>Код АЦП</th>
+    <th>Δ, % ш.к.</th>
+    <th class="bar-cell">Доля шкалы</th>`;
+
+  U.tbody.innerHTML = "";
+  for (let j = 0; j < N; j++) {
+    let gsum = 0;
+    for (let i = 0; i < N; i++) gsum += R.gNow[i][j];
+    const e = R.err[j];
+    const tr = document.createElement("tr");
+    tr.className = S.hoverCol === j ? "hl" : "";
+    tr.innerHTML = `
+      <td>bl ${j}</td>
+      <td>${fmt(gsum, 2)}</td>
+      <td class="strong">${fmt(R.out[j], 2)}</td>
+      <td>${fmt(R.ideal[j], 2)}</td>
+      <td>${R.codes[j] !== null ? R.codes[j] : "—"}</td>
+      <td class="${Math.abs(e) > 1.5 ? "err-pos" : "err-ok"}">${e >= 0 ? "+" : ""}${fmt(e, 2)}</td>
+      <td class="bar-cell"><div class="minibar" style="width:${Math.min(R.out[j] / R.fs * 100, 100)}%"></div></td>`;
+    tr.addEventListener("pointerenter", () => { S.hoverCol = j; refresh(); });
+    tr.addEventListener("pointerleave", () => { S.hoverCol = -1; refresh(); });
+    U.tbody.appendChild(tr);
+  }
+}
+
+/* ══ Пересчёт и перерисовка ═════════════════════════════════════════ */
+let raf = null;
+function refresh() {
+  if (raf) return;
+  raf = requestAnimationFrame(() => {
+    raf = null;
+    const R = compute();
+    draw(R);
+    paintVec();
+    paintWGrid(R);
+    paintSpec(R);
+    paintMetrics(R);
+    paintTable(R);
+    U.legHi.textContent = `${fmt(R.d.drive * R.gHi, 1)} ${u().flux} / ячейка`;
+    document.getElementById("v-time").textContent = fmtTime(R.t);
+  });
+}
+
+/* ══ Шаблоны весов и входа ══════════════════════════════════════════ */
+function setWeights(kind) {
+  const rng = mulberry32(4242 + kind.length * 31);
+  S.W = [];
+  for (let i = 0; i < N; i++) {
+    S.W[i] = [];
+    for (let j = 0; j < N; j++) {
+      let w;
+      switch (kind) {
+        case "gauss": {
+          const dx = (i - 3.5) / 2.6, dy = (j - 3.5) / 2.6;
+          w = Math.exp(-(dx * dx + dy * dy)); break;
+        }
+        case "ident": w = i === j ? 1 : 0.04; break;
+        case "sparse": w = rng() < 0.25 ? 0.35 + rng() * 0.65 : 0.02; break;
+        case "ramp": w = 0.06 + 0.94 * (j / (N - 1)); break;
+        default: w = rng();
+      }
+      S.W[i][j] = Math.min(Math.max(w, 0), 1);
+    }
+  }
+}
+function setInput(kind) {
+  const rng = mulberry32(777);
+  for (let i = 0; i < N; i++) {
+    S.V[i] = kind === "flat" ? 0.7 : 0.15 + rng() * 0.85;
+  }
+}
+
+/* ══ События ════════════════════════════════════════════════════════ */
+function setCarrier(c) {
+  S.carrier = c;
+  document.documentElement.setAttribute("data-carrier", c);
+  S.devKey = c === "electrical" ? "hermes2" : "he";
+  document.getElementById("m-el").setAttribute("aria-pressed", String(c === "electrical"));
+  document.getElementById("m-fl").setAttribute("aria-pressed", String(c === "fluidic"));
+  U.noteFluid.hidden = c !== "fluidic";
+  U.vecTitle.textContent = c === "electrical" ? "Вектор входа · напряжения" : "Вектор входа · давления";
+  U.wTitle.textContent = c === "electrical" ? "Матрица весов · проводимости" : "Матрица весов · радиусы каналов";
+  document.getElementById("hint").innerHTML = "потяни — поворот<br>колесо — масштаб";
+  buildDevSelect();
+  readTheme();
+  refresh();
+}
+
+document.getElementById("m-el").addEventListener("click", () => setCarrier("electrical"));
+document.getElementById("m-fl").addEventListener("click", () => setCarrier("fluidic"));
+U.dev.addEventListener("change", e => { S.devKey = e.target.value; refresh(); });
+
+for (const [id, key] of [["f-prog", "prog"], ["f-noise", "noise"], ["f-adc", "adc"], ["f-comp", "comp"]]) {
+  document.getElementById(id).addEventListener("change", e => {
+    S.flags[key] = e.target.checked; refresh();
+  });
+}
+document.getElementById("time").addEventListener("input", e => { S.tIdx = +e.target.value; refresh(); });
+document.getElementById("v-rand").addEventListener("click", () => {
+  for (let i = 0; i < N; i++) S.V[i] = 0.1 + Math.random() * 0.9;
+  refresh();
+});
+document.getElementById("v-flat").addEventListener("click", () => { setInput("flat"); refresh(); });
+document.getElementById("wpreset").addEventListener("change", e => { setWeights(e.target.value); refresh(); });
+document.getElementById("reprog").addEventListener("click", () => {
+  S.seedProg = Math.floor(Math.random() * 1e6);
+  S.seedRead = Math.floor(Math.random() * 1e6);
+  refresh();
+});
+
+// Вращение и масштаб
+let drag = null;
+cv.addEventListener("pointerdown", e => {
+  drag = { x: e.clientX, y: e.clientY, yaw: S.cam.yaw, pitch: S.cam.pitch };
+  cv.setPointerCapture(e.pointerId);
+});
+cv.addEventListener("pointermove", e => {
+  if (!drag) return;
+  S.cam.yaw = drag.yaw + (e.clientX - drag.x) * 0.008;
+  S.cam.pitch = Math.min(Math.max(drag.pitch + (e.clientY - drag.y) * 0.006, -0.2), 1.35);
+  refresh();
+});
+cv.addEventListener("pointerup", e => { drag = null; cv.releasePointerCapture(e.pointerId); });
+cv.addEventListener("pointercancel", () => { drag = null; });
+cv.addEventListener("wheel", e => {
+  e.preventDefault();
+  S.cam.zoom = Math.min(Math.max(S.cam.zoom * (e.deltaY > 0 ? 0.92 : 1.08), 0.45), 3);
+  refresh();
+}, { passive: false });
+
+// Размер холста
+const ro = new ResizeObserver(entries => {
+  for (const en of entries) {
+    CSSW = en.contentRect.width;
+    CSSH = en.contentRect.height;
+  }
+  refresh();
+});
+ro.observe(cv.parentElement);
+
+// Смена темы
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { readTheme(); refresh(); });
+new MutationObserver(() => { readTheme(); refresh(); })
+  .observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+/* ══ Запуск ═════════════════════════════════════════════════════════ */
+document.documentElement.setAttribute("data-carrier", "electrical");
+setWeights("rand");
+setInput("rand");
+buildVec();
+buildWGrid();
+buildDevSelect();
+readTheme();
+document.fonts?.ready.then(refresh);
+refresh();
+
+})();
+</script>
+
+</body></html>
